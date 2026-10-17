@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Report Card — CampusPro{% endblock %}
+
+{% block content %}
+<style>
+  /* When printing (or Save as PDF) hide the navbar and buttons and use plain white paper */
+  @media print {
+    nav.navbar, .no-print, .alert { display: none !important; }
+    body { background: #fff !important; }
+    .card { border: 1px solid #999 !important; box-shadow: none !important; }
+    a { text-decoration: none; color: #000; }
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h4 class="mb-0"><i class="bi bi-file-earmark-text text-success me-2"></i>Report Card</h4>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-success btn-sm" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Print / Download PDF
+    </button>
+    <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <h3 class="mb-1">CampusPro — Academic Report Card</h3>
+    <p class="mb-0">Student: <strong>{{ request.user.username }}</strong></p>
+    <p class="text-muted small mb-0">Generated on {{ generated_on|date:"d M Y, H:i" }}</p>
+  </div>
+</div>
+
+{% for r in rows %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white">
+    <strong>{{ r.course.code }}</strong> — {{ r.course.name }}
+    <span class="text-muted small ms-2">
+      Teacher: {% if r.course.teacher %}{{ r.course.teacher.username }}{% else %}Not assigned{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+    <p class="mb-2">
+      Attendance: <strong>{{ r.attendance }}%</strong>
+      {% if r.attendance < 75 %}<span class="badge bg-danger ms-1">Low attendance</span>{% endif %}
+    </p>
+    {% if r.marks %}
+    <table class="table table-sm mb-2">
+      <thead><tr><th>Exam</th><th>Score</th><th>Out of</th><th>%</th></tr></thead>
+      <tbody>
+        {% for m in r.marks %}
+        <tr>
+          <td>{{ m.exam_name }}</td><td>{{ m.score }}</td><td>{{ m.max_score }}</td>
+          <td>{% widthratio m.score m.max_score 100 %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="mb-0">Course result: <strong>{{ r.percentage }}%</strong> — Grade <strong>{{ r.grade }}</strong></p>
+    {% else %}
+    <p class="text-muted mb-0">No marks uploaded yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% empty %}
+<div class="alert alert-info">You are not enrolled in any course yet.</div>
+{% endfor %}
+
+{% if rows %}
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h5 class="mb-0">
+      Overall:
+      {% if overall_pct != None %}{{ overall_pct }}% — Grade {{ overall_grade }}{% else %}No marks yet{% endif %}
+    </h5>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Attendance — {{ course.code }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-calendar-check text-primary me-2"></i>
+    Attendance: <span class="badge bg-secondary">{{ course.code }}</span> {{ course.name }}
+  </h4>
+  <a href="{% url 'teacher_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+<!-- Step 1: Pick a date (GET request — updates the URL with ?date=...) -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-auto">
+        <label class="form-label fw-semibold">Select Date</label>
+        {{ date_form.date }}
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search me-1"></i>Load Students
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Step 2: Show students only after a valid date is chosen -->
+{% if selected_date %}
+  {% if enrollments %}
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-light fw-semibold">
+      Marking attendance for <strong>{{ selected_date }}</strong>
+      {% if existing_attendance %}
+        <span class="badge bg-warning text-dark ms-2">Editing existing record</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <!-- Step 3: POST the checkboxes to save attendance -->
+      <form method="post">
+        {% csrf_token %}
+        <!-- Pass the selected date along with the POST data -->
+        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}" />
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Student</th>
+              <th class="text-center">Present</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for enrollment in enrollments %}
+            <tr>
+              <td class="align-middle">{{ enrollment.student.username }}</td>
+              <td class="text-center align-middle">
+                <input
+                  type="checkbox"
+                  name="present"
+                  value="{{ enrollment.pk }}"
+                  class="form-check-input"
+                  {% if existing_attendance %}
+                    {% for eid, att in existing_attendance.items %}
+                      {% if eid == enrollment.pk and att.present %}checked{% endif %}
+                    {% endfor %}
+                  {% endif %}
+                />
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-check-circle me-1"></i>Save Attendance
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% else %}
+    <div class="alert alert-warning">
+      <i class="bi bi-exclamation-circle me-2"></i>No students enrolled in this course yet.
+    </div>
+  {% endif %}
+
+{% elif date_form.errors %}
+  <div class="alert alert-danger">Please enter a valid date.</div>
+{% endif %}
+{% endblock %}

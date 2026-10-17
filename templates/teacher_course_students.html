@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Students — {{ course.code }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-people text-info me-2"></i>
+    Students: <span class="badge bg-secondary">{{ course.code }}</span> {{ course.name }}
+  </h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'teacher_attendance_csv' course.pk %}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-download me-1"></i>Export Attendance CSV
+    </a>
+    <a href="{% url 'teacher_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Search by username -->
+<form method="get" class="d-flex gap-2 mb-3">
+  <input type="text" name="q" value="{{ q }}"
+         class="form-control form-control-sm w-auto"
+         placeholder="Search by username…" />
+  <button type="submit" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-search me-1"></i>Search
+  </button>
+  {% if q %}
+    <a href="{% url 'teacher_course_students' course.pk %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+  {% endif %}
+</form>
+
+{% if rows %}
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Student</th>
+          <th class="text-center">Attendance %</th>
+          <th class="text-center">Marks %</th>
+          <th class="text-center">Grade</th>
+          <th class="text-center">At Risk?</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="align-middle">{{ row.enrollment.student.username }}</td>
+          <td class="text-center align-middle">
+            <span class="fw-semibold {% if row.at_risk %}text-danger{% else %}text-success{% endif %}">
+              {{ row.att_pct }}%
+            </span>
+          </td>
+          <td class="text-center align-middle">
+            {% if row.marks_pct is not None %}{{ row.marks_pct }}%
+            {% else %}<span class="text-muted">N/A</span>{% endif %}
+          </td>
+          <td class="text-center align-middle">
+            <span class="badge
+              {% if row.grade == 'A' %}bg-success
+              {% elif row.grade == 'B' %}bg-primary
+              {% elif row.grade == 'C' %}bg-info text-dark
+              {% elif row.grade == 'D' %}bg-warning text-dark
+              {% elif row.grade == 'Fail' %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ row.grade }}
+            </span>
+          </td>
+          <td class="text-center align-middle">
+            {% if row.at_risk %}
+              <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>At Risk</span>
+            {% else %}
+              <span class="badge bg-success">OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' with page_obj=page_obj extra_params="&q="|add:q %}
+
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    {% if q %}No students match "<strong>{{ q }}</strong>".
+    {% else %}No students enrolled in this course yet.{% endif %}
+  </div>
+{% endif %}
+{% endblock %}

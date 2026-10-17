@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}All Users — CampusPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-people text-primary me-2"></i>All Users
+  </h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'users_csv' %}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-download me-1"></i>Export CSV
+    </a>
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<!--
+  Search + filter form.
+  Method GET: all params appear in the URL, so pagination links can include them.
+  Django auto-escapes {{ q }} in the value attribute — XSS is prevented.
+-->
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <!-- Search by username or email -->
+  <div class="col-auto">
+    <input type="text" name="q" value="{{ q }}"
+           class="form-control form-control-sm"
+           placeholder="Search username or email…" />
+  </div>
+
+  <!-- Filter by role -->
+  <div class="col-auto">
+    <select name="role" class="form-select form-select-sm">
+      <option value="">All Roles</option>
+      <option value="student"  {% if role == 'student'  %}selected{% endif %}>Student</option>
+      <option value="teacher"  {% if role == 'teacher'  %}selected{% endif %}>Teacher</option>
+    </select>
+  </div>
+
+  <!-- Filter by approval status -->
+  <div class="col-auto">
+    <select name="approved" class="form-select form-select-sm">
+      <option value="">All Status</option>
+      <option value="1" {% if approved == '1' %}selected{% endif %}>Approved</option>
+      <option value="0" {% if approved == '0' %}selected{% endif %}>Pending</option>
+    </select>
+  </div>
+
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-funnel me-1"></i>Filter
+    </button>
+    <a href="{% url 'users_list' %}" class="btn btn-outline-secondary btn-sm ms-1">Clear</a>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-primary">
+        <tr>
+          <th>Username</th><th>Email</th><th>Role</th>
+          <th>Status</th><th>Registered</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for profile in page_obj %}
+        <tr>
+          {# {{ }} auto-escapes — searching <script>alert(1)</script> shows as text, not code #}
+          <td>{{ profile.user.username }}</td>
+          <td>{{ profile.user.email }}</td>
+          <td><span class="badge bg-secondary">{{ profile.role|capfirst }}</span></td>
+          <td>
+            {% if profile.is_approved %}
+              <span class="badge bg-success">Approved</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Pending</span>
+            {% endif %}
+          </td>
+          <td>{{ profile.created_at|date:"d M Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% comment %}
+  Pass all active filters as extra_params so pagination links keep them.
+  e.g. ?page=2&q=alice&role=student&approved=1
+{% endcomment %}
+{% include 'partials/pagination.html' with page_obj=page_obj extra_params="&q="|add:q|add:"&role="|add:role|add:"&approved="|add:approved %}
+
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>No users match the current filters.
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard — CampusPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0"><i class="bi bi-shield-fill-check text-primary me-2"></i>Admin Dashboard</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'users_list' %}"   class="btn btn-outline-primary btn-sm"><i class="bi bi-people me-1"></i>All Users</a>
+    <a href="{% url 'pending_users' %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-person-check me-1"></i>Pending</a>
+    <a href="{% url 'course_list' %}"  class="btn btn-outline-success btn-sm"><i class="bi bi-journal-bookmark me-1"></i>Courses</a>
+    <a href="{% url 'audit_log' %}"    class="btn btn-outline-dark btn-sm"><i class="bi bi-journal-text me-1"></i>Audit Log</a>
+    <a href="{% url 'notices_page' %}" class="btn btn-outline-info btn-sm"><i class="bi bi-bell me-1"></i>Notices</a>
+    <a href="{% url 'locked_accounts' %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-lock me-1"></i>Locked</a>
+    <a href="/django-admin/"           class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear me-1"></i>Django Admin</a>
+  </div>
+</div>
+
+<!-- ===== STAT CARDS ===== -->
+<div class="row g-3 mb-4">
+  {% for icon, label, value, color in stat_cards %}
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="fs-2 text-{{ color }}"><i class="bi bi-{{ icon }}"></i></div>
+        <div>
+          <div class="fs-3 fw-bold">{{ value }}</div>
+          <div class="text-muted small">{{ label }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ===== CHARTS ROW 1 ===== -->
+<div class="row g-4 mb-4">
+
+  <!-- Chart 1: Enrollments per course -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-bar-chart me-2"></i>Students Enrolled per Course
+      </div>
+      <div class="card-body">
+        {% if chart1_labels %}
+          <canvas id="chart1" height="220"></canvas>
+        {% else %}
+          <p class="text-muted text-center mt-4">No course data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: Approved vs Pending (doughnut) -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-pie-chart me-2"></i>Approved vs Pending Users
+      </div>
+      <div class="card-body d-flex justify-content-center align-items-center">
+        {% if chart2_values != "[0, 0]" %}
+          <canvas id="chart2" style="max-height:220px"></canvas>
+        {% else %}
+          <p class="text-muted">No user data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== CHARTS ROW 2 ===== -->
+<div class="row g-4 mb-4">
+
+  <!-- Chart 3: Avg attendance % per course -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-calendar-check me-2"></i>Avg Attendance % per Course
+      </div>
+      <div class="card-body">
+        {% if chart3_labels %}
+          <canvas id="chart3" height="220"></canvas>
+        {% else %}
+          <p class="text-muted text-center mt-4">No attendance data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 4: Avg marks % per course -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-pencil-square me-2"></i>Avg Marks % per Course
+      </div>
+      <div class="card-body">
+        {% if chart4_labels %}
+          <canvas id="chart4" height="220"></canvas>
+        {% else %}
+          <p class="text-muted text-center mt-4">No marks data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== RECENT USERS TABLE ===== -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-light fw-semibold">
+    <i class="bi bi-clock-history me-2"></i>5 Most Recently Registered Users
+  </div>
+  <div class="card-body p-0">
+    {% if recent_users %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Registered</th></tr>
+      </thead>
+      <tbody>
+        {% for profile in recent_users %}
+        <tr>
+          {# Django auto-escapes {{ }} output — no |safe needed, XSS is prevented #}
+          <td>{{ profile.user.username }}</td>
+          <td>{{ profile.user.email }}</td>
+          <td><span class="badge bg-secondary">{{ profile.role|capfirst }}</span></td>
+          <td>
+            {% if profile.is_approved %}
+              <span class="badge bg-success">Approved</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Pending</span>
+            {% endif %}
+          </td>
+          <td>{{ profile.created_at|date:"d M Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="text-muted p-3 mb-0">No users registered yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+{# json_script safely embeds Python data as JSON in a <script> tag.           #}
+{# It HTML-escapes special characters, so injecting <script> in a username    #}
+{# will NOT execute — this is the XSS-safe way to pass data to JavaScript.    #}
+{{ chart1_labels|json_script:"c1l" }}
+{{ chart1_values|json_script:"c1v" }}
+{{ chart2_labels|json_script:"c2l" }}
+{{ chart2_values|json_script:"c2v" }}
+{{ chart3_labels|json_script:"c3l" }}
+{{ chart3_values|json_script:"c3v" }}
+{{ chart4_labels|json_script:"c4l" }}
+{{ chart4_values|json_script:"c4v" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // JSON.parse reads the data that json_script embedded safely above
+  makeBarChart(
+    'chart1',
+    JSON.parse(document.getElementById('c1l').textContent),
+    JSON.parse(document.getElementById('c1v').textContent),
+    'Students Enrolled',
+    'rgba(54, 162, 235, 0.7)'
+  );
+  makeDoughnutChart(
+    'chart2',
+    JSON.parse(document.getElementById('c2l').textContent),
+    JSON.parse(document.getElementById('c2v').textContent),
+    ['rgba(75,192,192,0.8)', 'rgba(255,99,132,0.8)']
+  );
+  makeBarChartCapped(
+    'chart3',
+    JSON.parse(document.getElementById('c3l').textContent),
+    JSON.parse(document.getElementById('c3v').textContent),
+    'Avg Attendance %',
+    'rgba(255, 159, 64, 0.7)'
+  );
+  makeBarChartCapped(
+    'chart4',
+    JSON.parse(document.getElementById('c4l').textContent),
+    JSON.parse(document.getElementById('c4v').textContent),
+    'Avg Marks %',
+    'rgba(153, 102, 255, 0.7)'
+  );
+</script>
+
+{# Build stat_cards in the template using a workaround: pass data from view context #}
+<script>
+  // Stat cards are rendered server-side via the view context — no JS needed here
+</script>
+{% endblock %}

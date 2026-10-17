@@ -1,0 +1,43 @@
+{% comment %}
+  partials/pagination.html
+  Usage: include this file with page_obj, extra_params and page_param.
+  page_param:   the GET parameter name for the page number (default: "page")
+  extra_params: additional query string params to preserve (search/filter values)
+{% endcomment %}
+{% if page_obj.has_other_pages %}
+{% with param=page_param|default:"page" %}
+<nav class="mt-3" aria-label="Page navigation">
+  <ul class="pagination pagination-sm justify-content-center mb-0">
+
+    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+      <a class="page-link"
+         href="?{{ param }}={{ page_obj.previous_page_number }}{{ extra_params }}">
+        &laquo; Prev
+      </a>
+    </li>
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+        <li class="page-item">
+          <a class="page-link" href="?{{ param }}={{ num }}{{ extra_params }}">{{ num }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+      <a class="page-link"
+         href="?{{ param }}={{ page_obj.next_page_number }}{{ extra_params }}">
+        Next &raquo;
+      </a>
+    </li>
+
+  </ul>
+  <p class="text-center text-muted small mt-1">
+    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    ({{ page_obj.paginator.count }} total)
+  </p>
+</nav>
+{% endwith %}
+{% endif %}

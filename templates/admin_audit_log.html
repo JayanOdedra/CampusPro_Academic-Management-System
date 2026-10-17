@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}Audit Log — CampusPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-journal-text text-dark me-2"></i>Audit Log
+  </h4>
+  <div class="d-flex gap-2">
+    {# CSV export: same filters passed as GET params so export matches the view #}
+    <a href="{% url 'audit_log_csv' %}?q={{ q }}&action={{ action_f }}&date_from={{ date_from }}&date_to={{ date_to }}"
+       class="btn btn-outline-success btn-sm">
+      <i class="bi bi-download me-1"></i>Export CSV
+    </a>
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+{% if not mongo_ok %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    MongoDB is currently unavailable. Audit log cannot be displayed.
+  </div>
+{% endif %}
+
+<!-- ===== FILTER FORM ===== -->
+<!--
+  All filter values are GET params so they appear in the URL.
+  This means the CSV export link can read them directly.
+  Django auto-escapes {{ q }} etc. in the value attribute — XSS safe.
+-->
+<form method="get" class="row g-2 mb-4 align-items-end">
+  <div class="col-auto">
+    <label class="form-label fw-semibold small mb-1">Username</label>
+    <input type="text" name="q" value="{{ q }}"
+           class="form-control form-control-sm" placeholder="Search username…" />
+  </div>
+  <div class="col-auto">
+    <label class="form-label fw-semibold small mb-1">Action</label>
+    <select name="action" class="form-select form-select-sm">
+      <option value="">All Actions</option>
+      {% for act in valid_actions %}
+        <option value="{{ act }}" {% if action_f == act %}selected{% endif %}>{{ act }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label fw-semibold small mb-1">From</label>
+    <input type="date" name="date_from" value="{{ date_from }}"
+           class="form-control form-control-sm" />
+  </div>
+  <div class="col-auto">
+    <label class="form-label fw-semibold small mb-1">To</label>
+    <input type="date" name="date_to" value="{{ date_to }}"
+           class="form-control form-control-sm" />
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-funnel me-1"></i>Filter
+    </button>
+    <a href="{% url 'audit_log' %}" class="btn btn-outline-secondary btn-sm ms-1">Clear</a>
+  </div>
+</form>
+
+<!-- ===== CHART: logs per action (last 7 days) ===== -->
+{% if chart_labels %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-light fw-semibold">
+    <i class="bi bi-bar-chart me-2"></i>Activity by Action (Last 7 Days)
+  </div>
+  <div class="card-body">
+    <canvas id="auditChart" height="100"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- ===== LOG TABLE ===== -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-light d-flex justify-content-between">
+    <span class="fw-semibold">
+      <i class="bi bi-list-ul me-2"></i>
+      {{ total }} log entr{{ total|pluralize:"y,ies" }} found
+    </span>
+    <span class="text-muted small">Page {{ page_num }} of {{ total_pages }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if logs %}
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Time (UTC)</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Action</th>
+            <th>Target</th>
+            <th>Details</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            {# All values are auto-escaped by Django — no |safe used anywhere #}
+            <td class="text-nowrap small">{{ log.timestamp|date:"d M Y H:i:s" }}</td>
+            <td>{{ log.username }}</td>
+            <td><span class="badge bg-secondary">{{ log.role }}</span></td>
+            <td>
+              <span class="badge
+                {% if log.action == 'LOGIN_FAILED' or log.action == 'ACCESS_DENIED' %}bg-danger
+                {% elif log.action == 'LOGOUT' %}bg-secondary
+                {% elif 'DELETED' in log.action or 'REJECTED' in log.action %}bg-warning text-dark
+                {% else %}bg-success{% endif %}">
+                {{ log.action }}
+              </span>
+            </td>
+            <td>{{ log.target|default:"—" }}</td>
+            <td class="small text-muted">{{ log.details|default:"—" }}</td>
+            <td class="small">{{ log.ip_address }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-muted p-3 mb-0">No log entries match the current filters.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ===== MANUAL PAGINATION (MongoDB skip/limit, not Django Paginator) ===== -->
+{% if total_pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination pagination-sm justify-content-center mb-0">
+    <li class="page-item {% if page_num <= 1 %}disabled{% endif %}">
+      <a class="page-link"
+         href="?page={{ page_num|add:"-1" }}&q={{ q }}&action={{ action_f }}&date_from={{ date_from }}&date_to={{ date_to }}">
+        &laquo; Prev
+      </a>
+    </li>
+    {% for p in total_pages|rjust:total_pages %}{% endfor %}
+    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+    <li class="page-item {% if page_num >= total_pages %}disabled{% endif %}">
+      <a class="page-link"
+         href="?page={{ page_num|add:"1" }}&q={{ q }}&action={{ action_f }}&date_from={{ date_from }}&date_to={{ date_to }}">
+        Next &raquo;
+      </a>
+    </li>
+  </ul>
+  <p class="text-center text-muted small mt-1">
+    Page {{ page_num }} of {{ total_pages }} ({{ total }} total)
+  </p>
+</nav>
+{% endif %}
+
+{# Safely embed chart data using json_script #}
+{{ chart_labels|json_script:"auditLabels" }}
+{{ chart_values|json_script:"auditValues" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  var auditL = JSON.parse(document.getElementById('auditLabels').textContent);
+  var auditV = JSON.parse(document.getElementById('auditValues').textContent);
+  if (auditL.length) {
+    makeBarChart('auditChart', auditL, auditV, 'Log Count', 'rgba(54,162,235,0.7)');
+  }
+</script>
+{% endblock %}

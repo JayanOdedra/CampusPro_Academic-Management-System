@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}My History — CampusPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-clock-history text-success me-2"></i>My Full History
+  </h4>
+  <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+<!--
+  Filter by course.
+  GET method keeps the filter in the URL so both pagination controls work.
+-->
+<form method="get" class="d-flex gap-2 mb-4 align-items-end">
+  <div>
+    <label class="form-label fw-semibold small mb-1">Filter by Course</label>
+    <select name="course" class="form-select form-select-sm">
+      <option value="">All Courses</option>
+      {% for enrollment in all_enrollments %}
+        <option value="{{ enrollment.course.pk }}"
+          {% if course_filter == enrollment.course.pk|stringformat:"s" %}selected{% endif %}>
+          {{ enrollment.course.code }} — {{ enrollment.course.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-funnel me-1"></i>Filter
+    </button>
+    <a href="{% url 'student_history' %}" class="btn btn-outline-secondary btn-sm ms-1">Clear</a>
+  </div>
+</form>
+
+<div class="row g-4">
+
+  <!-- ===== ATTENDANCE HISTORY ===== -->
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-calendar-check me-2"></i>Attendance Records
+      </div>
+      <div class="card-body p-0">
+        {% if att_page.object_list %}
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Course</th><th>Date</th><th class="text-center">Status</th></tr>
+          </thead>
+          <tbody>
+            {% for att in att_page %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ att.enrollment.course.code }}</span></td>
+              <td>{{ att.date|date:"d M Y" }}</td>
+              <td class="text-center">
+                {% if att.present %}
+                  <span class="badge bg-success">Present</span>
+                {% else %}
+                  <span class="badge bg-danger">Absent</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% comment %}
+          att_page uses att_page= parameter; we also keep course= filter.
+          extra_params preserves the course filter when paginating attendance.
+        {% endcomment %}
+        {% include 'partials/pagination.html' with page_obj=att_page extra_params="&course="|add:course_filter page_param="att_page" %}
+        {% else %}
+          <p class="text-muted p-3 mb-0">No attendance records found.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MARKS HISTORY ===== -->
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-pencil-square me-2"></i>Marks Records
+      </div>
+      <div class="card-body p-0">
+        {% if marks_page.object_list %}
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Course</th><th>Exam</th><th class="text-center">Score</th><th class="text-center">%</th></tr>
+          </thead>
+          <tbody>
+            {% for mark in marks_page %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ mark.enrollment.course.code }}</span></td>
+              <td>{{ mark.exam_name }}</td>
+              <td class="text-center">{{ mark.score }}/{{ mark.max_score }}</td>
+              <td class="text-center">
+                {% if mark.max_score > 0 %}
+                  {% widthratio mark.score mark.max_score 100 %}%
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% include 'partials/pagination.html' with page_obj=marks_page extra_params="&course="|add:course_filter page_param="marks_page" %}
+        {% else %}
+          <p class="text-muted p-3 mb-0">No marks records found.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

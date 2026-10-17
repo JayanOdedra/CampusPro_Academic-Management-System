@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Pending Approvals — CampusPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-person-check-fill text-primary me-2"></i>Pending User Approvals
+  </h4>
+  <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+  </a>
+</div>
+
+{% if pending %}
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-primary">
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Registered</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for profile in pending %}
+          <tr>
+            <td class="align-middle">
+              <i class="bi bi-person-circle me-1 text-secondary"></i>
+              {{ profile.user.username }}
+            </td>
+            <td class="align-middle">{{ profile.user.email }}</td>
+            <td class="align-middle">
+              <!-- Show a coloured badge for each role -->
+              {% if profile.role == 'teacher' %}
+                <span class="badge bg-info text-dark">Teacher</span>
+              {% else %}
+                <span class="badge bg-success">Student</span>
+              {% endif %}
+            </td>
+            <td class="align-middle">
+              {{ profile.created_at|date:"d M Y, H:i" }}
+            </td>
+            <td class="text-center align-middle">
+
+              <!-- Approve button — POST with CSRF token -->
+              <form method="post" action="{% url 'pending_users' %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ profile.user.pk }}" />
+                <input type="hidden" name="action" value="approve" />
+                <button type="submit" class="btn btn-success btn-sm me-1">
+                  <i class="bi bi-check-lg me-1"></i>Approve
+                </button>
+              </form>
+
+              <!-- Reject button — POST with CSRF token -->
+              <form method="post" action="{% url 'pending_users' %}" class="d-inline"
+                    onsubmit="return confirm('Reject and delete {{ profile.user.username }}?')">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ profile.user.pk }}" />
+                <input type="hidden" name="action" value="reject" />
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="bi bi-x-lg me-1"></i>Reject
+                </button>
+              </form>
+
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% else %}
+  <!-- No pending users -->
+  <div class="alert alert-success">
+    <i class="bi bi-check-circle-fill me-2"></i>
+    No pending approvals. All users have been reviewed.
+  </div>
+{% endif %}
+{% endblock %}

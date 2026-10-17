@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}My Attendance — {{ course.code }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-calendar-check text-primary me-2"></i>
+    Attendance: <span class="badge bg-secondary">{{ course.code }}</span> {{ course.name }}
+  </h4>
+  <a href="{% url 'student_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+<!-- Summary card -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        <div class="fs-2 fw-bold text-primary">{{ total }}</div>
+        <div class="text-muted small">Total Classes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        <div class="fs-2 fw-bold text-success">{{ attended }}</div>
+        <div class="text-muted small">Classes Attended</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        <div class="fs-2 fw-bold {% if percentage < 75 %}text-danger{% else %}text-success{% endif %}">
+          {{ percentage }}%
+        </div>
+        <div class="text-muted small">Attendance %</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Low attendance warning: shown only when percentage is below 75 -->
+{% if total > 0 and percentage < 75 %}
+  <div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Low Attendance!</strong> Your attendance is {{ percentage }}%, which is below the required 75%.
+  </div>
+{% endif %}
+
+<!-- Detailed attendance log -->
+{% if attendances %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-light fw-semibold">Attendance Log</div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>Date</th><th class="text-center">Status</th></tr>
+      </thead>
+      <tbody>
+        {% for att in attendances %}
+        <tr>
+          <td>{{ att.date|date:"d M Y" }}</td>
+          <td class="text-center">
+            {% if att.present %}
+              <span class="badge bg-success">Present</span>
+            {% else %}
+              <span class="badge bg-danger">Absent</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>No attendance records yet for this course.
+  </div>
+{% endif %}
+{% endblock %}

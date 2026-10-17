@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Delete Course — CampusPro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-md-5">
+    <div class="card shadow-sm border-danger border-2">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-exclamation-triangle-fill display-4 text-danger mb-3"></i>
+        <h4>Delete Course?</h4>
+        <p class="text-muted">
+          You are about to delete <strong>{{ course.code }} — {{ course.name }}</strong>.
+          <br>This will also remove all enrollments, attendance, and marks for this course.
+          <br><strong>This action cannot be undone.</strong>
+        </p>
+        <!-- POST form — deletion must never happen via a GET request -->
+        <form method="post" class="d-flex justify-content-center gap-3 mt-4">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash me-1"></i>Yes, Delete
+          </button>
+          <a href="{% url 'course_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

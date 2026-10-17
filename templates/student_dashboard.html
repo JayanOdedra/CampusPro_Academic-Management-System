@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard — CampusPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-book-half text-success me-2"></i>Welcome, {{ request.user.username }}
+  </h4>
+  <div class="d-flex gap-2">
+    <span class="badge bg-success fs-6">Student</span>
+    <a href="{% url 'student_history' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-clock-history me-1"></i>Full History
+    </a>
+    <a href="{% url 'report_card' %}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-file-earmark-text me-1"></i>Report Card
+    </a>
+  </div>
+</div>
+
+<!-- ===== STAT CARDS ===== -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="fs-2 text-success"><i class="bi bi-journal-check"></i></div>
+        <div>
+          <div class="fs-3 fw-bold">{{ enrolled_count }}</div>
+          <div class="text-muted small">Enrolled Courses</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="fs-2 {% if overall_att < 75 %}text-danger{% else %}text-primary{% endif %}">
+          <i class="bi bi-calendar-check"></i>
+        </div>
+        <div>
+          <div class="fs-3 fw-bold">{{ overall_att }}%</div>
+          <div class="text-muted small">Overall Attendance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="fs-2 text-warning"><i class="bi bi-bar-chart-fill"></i></div>
+        <div>
+          <div class="fs-3 fw-bold">{{ overall_marks }}%</div>
+          <div class="text-muted small">Overall Marks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LOW ATTENDANCE ALERTS ===== -->
+{% for item in low_att_courses %}
+  <div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Low Attendance in {{ item.code }}:</strong> {{ item.pct }}% — below the required 75%.
+  </div>
+{% endfor %}
+
+<!-- ===== CHARTS ===== -->
+<div class="row g-4 mb-4">
+
+  <!-- Chart 1: Attendance % per course -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-calendar-check me-2"></i>Attendance % per Course
+      </div>
+      <div class="card-body">
+        {% if att_labels %}
+          <canvas id="attChart" height="220"></canvas>
+        {% else %}
+          <p class="text-muted text-center mt-4">No attendance data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: Marks % per course -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-bar-chart me-2"></i>Marks % per Course
+      </div>
+      <div class="card-body">
+        {% if marks_labels %}
+          <canvas id="marksChart" height="220"></canvas>
+        {% else %}
+          <p class="text-muted text-center mt-4">No marks data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart 3: Score trend (line) -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-light fw-semibold">
+    <i class="bi bi-graph-up me-2"></i>Score Trend Across All Exams
+  </div>
+  <div class="card-body">
+    {% if trend_labels %}
+      <canvas id="trendChart" height="120"></canvas>
+    {% else %}
+      <p class="text-muted text-center mt-4">No exam data yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ===== ENROLLED COURSES CARDS ===== -->
+{% if enrollments %}
+<h5 class="mb-3">My Courses</h5>
+<div class="row g-3">
+  {% for enrollment in enrollments %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-success bg-opacity-10 border-0">
+        <span class="badge bg-success me-2">{{ enrollment.course.code }}</span>
+        <strong>{{ enrollment.course.name }}</strong>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          <i class="bi bi-person-fill me-1"></i>
+          Teacher:
+          {% if enrollment.course.teacher %}{{ enrollment.course.teacher.username }}
+          {% else %}<em>Not assigned</em>{% endif %}
+        </p>
+        <div class="d-grid gap-2">
+          <a href="{% url 'student_attendance' enrollment.course.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-calendar-check me-1"></i>View Attendance
+          </a>
+          <a href="{% url 'student_marks' enrollment.course.pk %}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-bar-chart me-1"></i>View Marks
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>You are not enrolled in any courses yet.
+  </div>
+{% endif %}
+
+{# Safely embed chart data using json_script — static ids, no XSS risk #}
+{{ att_labels|json_script:"attLabels" }}
+{{ att_values|json_script:"attValues" }}
+{{ marks_labels|json_script:"marksLabels" }}
+{{ marks_values|json_script:"marksValues" }}
+{{ trend_labels|json_script:"trendLabels" }}
+{{ trend_values|json_script:"trendValues" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Read each JSON blob that json_script embedded, then render the chart
+  var attL   = JSON.parse(document.getElementById('attLabels').textContent);
+  var attV   = JSON.parse(document.getElementById('attValues').textContent);
+  var marksL = JSON.parse(document.getElementById('marksLabels').textContent);
+  var marksV = JSON.parse(document.getElementById('marksValues').textContent);
+  var trendL = JSON.parse(document.getElementById('trendLabels').textContent);
+  var trendV = JSON.parse(document.getElementById('trendValues').textContent);
+
+  if (attL.length)   makeBarChartCapped('attChart',   attL,   attV,   'Attendance %', 'rgba(54,162,235,0.7)');
+  if (marksL.length) makeBarChartCapped('marksChart', marksL, marksV, 'Marks %',      'rgba(255,159,64,0.7)');
+  if (trendL.length) makeLineChart('trendChart', trendL, trendV, 'Score %');
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+*.log
+
+# Secrets: NEVER commit these
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

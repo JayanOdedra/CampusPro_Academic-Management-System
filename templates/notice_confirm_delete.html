@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Delete Notice — CampusPro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-md-5">
+    <div class="card shadow-sm border-danger border-2">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-exclamation-triangle-fill display-4 text-danger mb-3"></i>
+        <h4>Delete Notice?</h4>
+        <p class="text-muted">
+          You are about to delete the notice:
+          <br><strong>{{ notice.title }}</strong>
+          <br><small>Posted by {{ notice.posted_by }}</small>
+        </p>
+        {# POST-only delete — GET cannot trigger deletion #}
+        <form method="post" class="d-flex justify-content-center gap-3 mt-4">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash me-1"></i>Yes, Delete
+          </button>
+          <a href="{% url 'notices_page' %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
